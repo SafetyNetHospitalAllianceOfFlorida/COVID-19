@@ -8,17 +8,109 @@
     <title>Document</title>
 </head>
 <body>
- <!doctype html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Document</title>
-</head>
-<body>
- <h1>CORONA TIME!!!</h1>
+<canvas id="chartNYT" style="position: relative; height: 100vh; width: 110vw;"></canvas>
+
+<script type="text/javascript">
+// Request data using D3
+var nyt = d3.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/live/us-states.csv').then(makeChart);
+
+function makeChart(nytimes) {
+  // nytimes is an array of objects where each object is something like:
+  // {
+  //   "state": "Alabama",
+  //   "cases": "49000",
+  //   "deaths": "4000"
+  // }
+  
+
+  var stateLabels = nytimes.filter(function(nytimes) { return nytimes.state }).map(function(d) {return d.state});
+  var casesData = nytimes.filter(function(nytimes) { return nytimes.state }).map(function(d) {return d.cases});
+  var deathsData = nytimes.filter(function(nytimes) { return nytimes.state }).map(function(d) {return d.deaths});
+  var nonfatalCases = casesData.map(function(item, index) { return item - deathsData[index]; });
+  /*
+    An alternative way of making the nonfatalCases is below:
+	nonfatalCases = [];
+    for(var i = 0; i <= deathsData.length-1;i++)
+      nonfatalCases.push(casesData[i] - deathsData[i]);
+  */
+
+  var chart = new Chart('chartNYT', {
+    type: 'horizontalBar',
+    options: {
+      maintainAspectRatio: false,
+      legend: {
+        display: true
+      },
+      scales: {
+        xAxes:[{
+            scaleLabel: {
+              display: true,
+              labelString: 'COVID-19 Cases',
+              fontSize: 16
+            },
+            ticks: {
+    beginAtZero: true,
+    userCallback: function(value, index, values) {
+        value = value.toString();
+        value = value.split(/(?=(?:...)*$)/);
+        value = value.join(',');
+        return value;
+    }
+}
+        }],
+        yAxes: [{
+            stacked: true
+            }]
+      },
+       tooltips: {
+            mode: 'label',
+            intersect: false,
+            callbacks: {
+                afterTitle: function() {
+                    window.total = 0;
+                },
+                label: function(tooltipItem, data) {
+                    var stateCases = data.datasets[tooltipItem.datasetIndex].label;
+                    var valor = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index];
+
+                      //THIS ONE:
+                    valor = parseFloat(valor);
+
+        window.total += valor;
+                    return stateCases + ": " + valor.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");             
+                },
+                footer: function() {
+                    return "TOTAL CASES: " + window.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+                }
+            }
+        },
+    },
+    data: {
+      labels: stateLabels,
+      datasets: [
+        {
+          label: "Non-Fatal Cases",
+          data: nonfatalCases,
+          backgroundColor: 'rgba(125, 2, 10, 0.5)',
+		  borderColor: 'rgba(125, 2, 10, 0.5)',
+		  borderWidth: 1,
+		  stack: 1
+        },
+                {
+          label: "Deaths",
+          data: deathsData,
+          backgroundColor: 'rgba(125, 2, 10, 1.0)',
+		  borderColor: 'rgba(125, 2, 10, 1.0)',
+		  borderWidth: 1,
+		  stack: 1
+        }
+      ]
+    },
+  });
+}
+
+  </script>
 </body>
 </html>
 </body>
